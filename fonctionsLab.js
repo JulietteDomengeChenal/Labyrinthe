@@ -2,6 +2,9 @@
 
 let labyrintheSize;
 let labyrinthe;
+let stack;
+let goodWay;
+let startPosition;
 
 //----------------------------FONCTION CREATION LABYRINTHE----------------------------------------//
 function createLayrinthe(){
@@ -9,6 +12,8 @@ function createLayrinthe(){
     labyrintheSize = Math.floor(Math.random() * 23)+3;
     //labyrintheSize = 5;
     labyrinthe = labyrinthes[labyrintheSize]["ex-2"];
+    goodWay = [];
+    stack = [];
 
     let containerDiv = document.getElementById("container");
     containerDiv.innerHTML = ""; //---------------réinitailise la div
@@ -30,7 +35,6 @@ function createLayrinthe(){
             newLine.appendChild(newCase);
         }
     }
-    //resolveLab(labyrinthe, labyrintheSize);
     console.log(labyrintheSize);
     console.log(labyrinthe);
 }
@@ -75,7 +79,12 @@ function resolveLab(){
         }
     });
     let casePosition = Xstart*labyrintheSize + Ystart;
-    testCaseNext(casePosition, Xexit, Yexit);
+    startPosition = Xstart*labyrintheSize + Ystart;
+    stack.push(labyrinthe[startPosition]);
+    goodWay.push(labyrinthe[startPosition]);
+    //testCaseNext(casePosition, Xexit, Yexit);
+    testCaseParent(casePosition, Xexit, Yexit);
+
 }
 
 //----------------------------FONCTION TEST DES CASES--------------------------------------------//
@@ -114,20 +123,66 @@ async function testCaseNext(casePosition, Xexit, Yexit) {
     }
 }
 
+//----------------------------FONCTION CASES PARENTS-DFS-------------------------------------------//
+async function testCaseParent(casePosition, Xexit, Yexit) {
 
-// function findCasesImpasse(labyrinthe, casePosition) {
-//
-//     let isImpasse = { "isImpasse": true }
-//
-//     if (labyrinthe[casePosition].walls === [false, false, false, true] || labyrinthe[casePosition].walls === [false, false, true, false] ||
-//         labyrinthe[casePosition].walls === [false, true, false, false] || labyrinthe[casePosition].walls === [true, false, false, false]){
-//             Object.assign(labyrinthe[casePosition], isImpasse);
-//             let currentCase = document.getElementById((casePosition).toString());
-//             currentCase.classList.add("divImpasse");
-//     }
-// }
+    if (labyrinthe[casePosition].posX !== Xexit || labyrinthe[casePosition].posY !== Yexit) {
+        let currentCase;
+        let addFirstPath = {"firstPath": true}
 
+        let tableMove = [
+            {wall : 3, casePos : -1},
+            {wall : 0, casePos :-labyrintheSize},
+            {wall : 2, casePos : +labyrintheSize},
+            {wall : 1, casePos : +1}
+        ]
 
+        for (let move of tableMove){   //----------------------------"of" On parcourt les valeurs
+            if (labyrinthe[casePosition].walls[move.wall] === false && labyrinthe[casePosition + move.casePos].firstPath !== true){
+                currentCase = document.getElementById((casePosition).toString());
+                currentCase.classList.add("div2Path");
 
+                Object.assign(labyrinthe[casePosition], addFirstPath);
+                let addParent = {"parent": casePosition}
+                Object.assign(labyrinthe[casePosition+move.casePos], addParent);
+                let addPosition = {"labPosition": casePosition+move.casePos}
+                Object.assign(labyrinthe[casePosition+move.casePos], addPosition);
 
+                stack.push(labyrinthe[casePosition+move.casePos]);
 
+                if (labyrinthe[casePosition+move.casePos].exit === true) {
+                    let lastCasePosition = goodWay[goodWay.length-1].labPosition;
+                    showPath(lastCasePosition);
+                    return;
+                }
+            }
+        }
+        casePosition = stack[stack.length-1].labPosition;
+        for (let move of tableMove){
+            if (labyrinthe[casePosition].walls[move.wall] === false && labyrinthe[casePosition + move.casePos].firstPath === true) {
+                stack.pop();
+            }
+        }
+        goodWay.push(labyrinthe[casePosition]);
+        // console.log(stack);
+        // console.log(goodWay);
+        await new Promise((resolve)=>setTimeout(resolve, 100));
+        testCaseParent(casePosition, Xexit, Yexit);
+    }
+}
+
+//----------------------------FONCTION DESSINE CHEMIN--------------------------------------------//
+function showPath(lastCasePosition){
+    if(lastCasePosition !== startPosition){
+        let goodWayLine;
+        for (let way of goodWay) {
+            if(way.labPosition === lastCasePosition){
+                goodWayLine = way;
+            }
+        }
+        let singleCase = document.getElementById(lastCasePosition );
+        singleCase.classList.add("divWay");
+        lastCasePosition = goodWayLine.parent;
+        return showPath(lastCasePosition);
+    }
+}
